@@ -655,3 +655,12 @@ bool GLSLProgram::fileExists( const string & fileName )
     ret = stat(fileName.c_str(), &info);
     return 0 == ret;
 }
+
+
+/* releases the progam object from the current rendering stat */
+void GLSLProgram::release()
+{
+    if( handle <= 0 || (! linked) ) return;
+    glUseProgram( 0 );
+}
+

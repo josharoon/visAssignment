@@ -15,13 +15,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    crreateview.cpp \
     glslprogram.cpp \
     glutils.cpp \
     main.cpp \
     mainview.cpp \
     mainwindow.cpp \
     scenebasic.cpp \
-    uiinput.cpp
+
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -277,15 +278,13 @@ HEADERS += \
     C:/glm/glm/vec3.hpp \
     C:/glm/glm/vec4.hpp \
     C:/glm/glm/vector_relational.hpp \
-    controlwidget.h \
+    crreateview.h \
     glslprogram.h \
     glutils.h \
     mainview.h \
     mainwindow.h \
     scene.h \
     scenebasic.h \
-    ui_mainwindow.h \
-    uiinput.h \
 
 
 
@@ -300,6 +299,10 @@ DEPENDPATH += C:/glew-2.1.0/include
 FORMS += \
     mainwindow.ui \
     uiinput.ui
+
+DISTFILES += \
+    josh_sutcliffe_s346658_visualisation_class_diagram.qmodel \
+    shader/lineshader.vert
 
 
 

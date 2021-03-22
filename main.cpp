@@ -12,6 +12,9 @@
 #include "mainwindow.h"
 #include <QSpacerItem>
 #include <QDebug>
+#include "crreateview.h"
+
+
 
 
 
@@ -25,28 +28,27 @@ int main(int argc, char *argv[])
 
 
 
-    QGLFormat format;
-    format.setVersion(4,0);
-    format.setProfile(QGLFormat::CoreProfile);
 
 
-
-
+     crreateView creator;
 
 
     // The GL view
 
-    MainView *glView = new MainView(format, window);
-    window->setView(glView);
 
+
+
+    MainView *glView2 = creator.setView(*window);
+
+    window->setView(glView2);
     QVBoxLayout *mainLayout = new QVBoxLayout(win);
-    mainLayout->addWidget(glView);
-    mainLayout->addWidget(window->centralWidget()->findChild<QWidget*>("ControlWidget"));
+    mainLayout->addWidget(glView2);
+    //mainLayout->addWidget(window->centralWidget()->findChild<QWidget*>("ControlWidget"));
+    mainLayout->addWidget(window->centralWidget()->findChild<QWidget*>("tabWidget"));
     window->setLayout(mainLayout);
     window->setCentralWidget(win);
     window->setFixedSize(850,850);
     window->show();
-
     window->setDefaults();
     return app.exec();
 

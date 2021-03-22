@@ -2,7 +2,9 @@
 #define SCENE_H
 
 #include "C:/glm/glm/glm.hpp"
+#include <QImage>
 using glm::vec3;
+using glm::vec4;
 
 
 class Scene
@@ -22,6 +24,10 @@ public:
       to update your animation.
       */
     virtual void update( float t ) = 0;
+    virtual void update( QImage* image ) = 0;
+
+
+
 
     /**
       Draw your scene.
@@ -33,11 +39,37 @@ public:
       */
     virtual void resize(int, int) = 0;
 
+    /**
+    sets up line from 2 3D points
+      */
+
     virtual void setLineData(float line[6])= 0;
+
+
+    /**
+    sets up our rotational matrix
+      */
+
 
     virtual void setRot()= 0;
 
+    /**
+    sets the angle of rotation for our object
+      */
+
+
+    virtual void setMatricesLight1(float x, float y)= 0;
+
+    /**
+    sets the angle of rotation for our object
+      */
+
+
     virtual void setAlpha(float alpha)= 0;
+
+
+
+    virtual void setMaterialContributions(float ambientReflection,float diffuseReflection,float specularReflection,float constantAttenuation,float linearAttenuation,float quadraticAttenuation,float spotCutoff,float spotExponent,vec4 ambientColor,vec4 diffuseColor1,vec4 specularColor1) = 0;
 
 
 };

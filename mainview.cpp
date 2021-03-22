@@ -19,6 +19,10 @@ MainView::MainView(const QGLFormat & format, QWidget *parent) : QGLWidget(format
     this->setFocusPolicy(Qt::ClickFocus);
 
 
+
+
+
+
     timer = new QTimer(this);
     connect( timer, SIGNAL(timeout()), this, SLOT(timerUpdate()) );
     timer->start(50);
@@ -34,7 +38,9 @@ MainView::MainView(const QGLFormat & format, QWidget *parent) : QGLWidget(format
 
 void MainView::calcLine()
 {
-    //calculate line points based on formula.
+    /**
+     * calculate line points based on formula.
+     */
     this->line[3]=this->line[0]+(this->Mu.x*d);
     this->line[4]=this->line[1]+(this->Mu.y*d);
     this->line[5]=this->line[2]+(this->Mu.z*d);
@@ -47,6 +53,24 @@ void MainView::calcRot()
     scene->setAlpha(this->alpha);
     scene->setRot();
 
+
+}
+
+void MainView::setSamples(int samples)
+{
+    QGLFormat newFormat;
+
+
+
+    qDebug() << "current samples" << this->format().samples();
+
+    this->format().setSamples(32);
+
+
+
+    qDebug() << "samples changed to " << samples;
+
+    qDebug() << "current samples" << this->format().samples();
 
 }
 
@@ -82,9 +106,11 @@ void MainView::initializeGL() {
 
 void MainView::paintGL() {
     GLUtils::checkForOpenGLError();
-
+    scene->setMaterialContributions(ambientReflection,diffuseReflection,specularReflection,constantAttenuation,linearAttenuation,quadraticAttenuation,spotCutoff,spotExponent,ambientColor,diffuseColor1,specularColor1);
     scene->setLineData(line);
+    scene->setMatricesLight1(lightX,lightY);
     scene->render(eye,point);
+
 
 }
 

@@ -2,10 +2,20 @@
 #include "ui_mainwindow.h"
 #include <QDebug>
 #include <iostream>
+#include <QCoreApplication>
+#include <QDir>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QPalette>
+
+
+
+const float PI = 4.0*atan(1.0);
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), uid(new Ui::MainWindow)
 {
     uid->setupUi(this);
+    //connect(ui->redSlider, SIGNAL(valueChanged(int)), SLOT)
 }
 
 MainWindow::~MainWindow()
@@ -13,7 +23,7 @@ MainWindow::~MainWindow()
     delete uid;
 }
 
-void MainWindow::setView(MainView* view)
+void MainWindow::setView(MainView* &view)
 {
     this->view = view;
 }
@@ -103,7 +113,7 @@ void MainWindow::on_MuZSpin_valueChanged(double arg1)
 
 void MainWindow::on_alphaSpinBox_valueChanged(double arg1)
 {
-    view->alpha=(arg1*3.14159265358979323846)/180.0;
+    view->alpha=(arg1*PI)/180.0;
     view->calcRot();
 
 }
@@ -139,4 +149,171 @@ void MainWindow::on_Default_clicked()
 
 
 
+}
+
+
+
+void MainWindow::on_CodeDocPushButton_clicked()
+{
+   QDir doc=QDir(QCoreApplication::applicationDirPath()).relativeFilePath("./documentation/html/");
+   //qDebug() << QCoreApplication::applicationDirPath();
+   qDebug() << doc.absolutePath();
+   //qDebug() << QDir(QCoreApplication::applicationDirPath()).dirName();
+   QDesktopServices::openUrl(doc.absoluteFilePath("index.html"));
+}
+
+
+
+void MainWindow::on_ambientReflectionSpinBox_valueChanged(int arg1)
+{
+    view->ambientReflection=arg1/valScale;
+}
+
+void MainWindow::on_spotExponentSpinBox_valueChanged(int arg1)
+{
+    view->spotExponent=arg1;
+}
+
+void MainWindow::on_spotCutoffSpinBox_valueChanged(int arg1)
+{
+    view->spotCutoff=arg1/3000.0f;
+}
+
+void MainWindow::on_specularReflectionSpinBox_valueChanged(int arg1)
+{
+    view->specularReflection=arg1/valScale;
+}
+
+void MainWindow::on_diffuseReflectionSpinBox_valueChanged(int arg1)
+{
+    view->diffuseReflection=arg1/valScale;
+}
+
+void MainWindow::on_constantAttenuationSpinBox_valueChanged(int arg1)
+{
+    view->constantAttenuation=arg1/valScale;
+}
+
+void MainWindow::on_linearAttenuationSpinBox_valueChanged(int arg1)
+{
+    view->linearAttenuation=arg1/valScale;
+}
+
+void MainWindow::on_quadraticAttenuationSpinBox_valueChanged(int arg1)
+{
+   view->quadraticAttenuation=arg1/valScale;
+}
+
+void MainWindow::on_redSlider_valueChanged(int value)
+{
+    view->ambientColor[0]=value/255.0;
+
+
+    colorChanged();
+
+}
+void MainWindow::on_greenSlider_valueChanged(int value)
+{
+    view->ambientColor[1]=value/255.0;
+
+    colorChanged();
+
+}
+void MainWindow::on_blueSlider_valueChanged(int value)
+
+{
+
+    view->ambientColor[2]=value/255.0;
+    colorChanged();
+
+}
+
+
+
+void MainWindow::colorChanged()
+{
+   m_color.setRgb(uid->redSlider->value(),uid->greenSlider->value(),uid->blueSlider->value());
+   QPalette pal = uid->colorWidget->palette();
+   pal.setColor(QPalette::Window, m_color);
+   uid->colorWidget->setPalette(pal);
+
+
+}
+
+void MainWindow::colorChanged2()
+{
+   m_color.setRgb(uid->redSliderDiffuse->value(),uid->greenSliderDiffuse->value(),uid->blueSliderDiffuse->value());
+   QPalette pal = uid->colorWidget2->palette();
+   pal.setColor(QPalette::Window, m_color);
+   uid->colorWidget2->setPalette(pal);
+
+
+}
+
+
+void MainWindow::colorChanged3()
+{
+   m_color.setRgb(uid->redSliderSpecular->value(),uid->greenSliderSpecular->value(),uid->blueSliderSpecular->value());
+   QPalette pal = uid->colorWidget3->palette();
+   pal.setColor(QPalette::Window, m_color);
+   uid->colorWidget3->setPalette(pal);
+
+
+}
+
+
+void MainWindow::on_alphaSlider_valueChanged(int value)
+{
+     view->ambientColor[3]=value/255.0;
+}
+
+void MainWindow::on_redSliderDiffuse_valueChanged(int value)
+{
+    view->diffuseColor1[0]=value/255.0;
+
+    colorChanged2();
+}
+
+
+void MainWindow::on_greenSliderDiffuse_valueChanged(int value)
+{
+    view->diffuseColor1[1]=value/255.0;
+
+    colorChanged2();
+}
+
+void MainWindow::on_blueSliderDiffuse_valueChanged(int value)
+{
+    view->diffuseColor1[2]=value/255.0;
+    colorChanged2();
+}
+
+
+void MainWindow::on_blueSliderSpecular_valueChanged(int value)
+{
+    view->specularColor1[2]=value/255.0;
+    colorChanged3();
+}
+
+void MainWindow::on_greenSliderSpecular_valueChanged(int value)
+{
+    view->specularColor1[1]=value/255.0;
+    colorChanged3();
+}
+void MainWindow::on_redSliderSpecular_valueChanged(int value)
+{
+    view->specularColor1[0]=value/255.0;
+    colorChanged3();
+}
+
+
+
+void MainWindow::on_lightSliderHorizontal_valueChanged(int value)
+{
+    view->lightX=value*(PI/180);
+}
+
+void MainWindow::on_lightSliderVertical_valueChanged(int value)
+{
+    view->lightY=value*(PI/180);
 }

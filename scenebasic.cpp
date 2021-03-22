@@ -6,10 +6,13 @@
 #include <iostream>
 
 #include <fstream>
+
 using std::ifstream;
 
 #include <sstream>
 #include <QDebug>
+#include <QImage>
+#include <QGLWidget>
 using std::ostringstream;
 
 #include "glutils.h"
@@ -20,9 +23,17 @@ using std::ostringstream;
 
 const float PI = 4.0*atan(1.0);
 
-SceneBasic::SceneBasic()
+SceneBasic::SceneBasic()  : lightAngle(0.0)
 {
-    readData("shader/scenebasic2.dat");
+
+    readDataCube("shader/scenebasic2.dat");
+    const char * texName = "texture/image3.jpg";
+   image = new QImage(texName,"JPG");
+
+   readDataLight("shader/spotlight.dat");
+
+
+
 }
 
 void SceneBasic::readData(const char* fname)
@@ -44,53 +55,96 @@ void SceneBasic::readData(const char* fname)
 }
 
 
+
+// These methods were added from another vis course example so that
+// I could further experiment with lighting and normals
+
+void SceneBasic::readDataCube(const char* fname)
+{
+    ifstream ifs(fname);
+
+    if (!ifs) {
+        std::cout << "data file not found\n";
+        exit(1);
+    } else {
+        for (int i=0; i<108; i++) ifs >> positionData[i];
+        //for (int i=0; i<108; i++) ifs >> colorData[i];
+        //for (int i=0; i<108; i++) ifs >> cubePositionData[i];
+        for (int i=0; i<108; i++) ifs >> cubeNormalData[i];
+        for (int i=0; i<72; i++) ifs >> cubeTextureData[i];
+    }
+}
+
+void SceneBasic::readDataLight(const char* fname)
+{
+    ifstream ifs(fname);
+
+    if (!ifs) {
+        std::cout << "data file not found\n";
+        exit(1);
+    } else {
+        for (int i=0; i<54; i++) ifs >> lightPositionData[i];
+        for (int i=0; i<54; i++) ifs >> lightColorData[i];
+    }
+}
+
+
+
+
+
+
+
 void SceneBasic::CreateVBO()
 {
     // Create and populate the buffer objects
-    GLuint vboHandles[2];
-    glGenBuffers(2, vboHandles);
+    glGenBuffers(7, vboHandles);
 
-    GLuint positionBufferHandle = vboHandles[0];
-    GLuint colorBufferHandle = vboHandles[1];
+    GLuint cubePositionBufferHandle = vboHandles[0];
+    GLuint cubeNormalBufferHandle = vboHandles[1];
+    GLuint cubeTextureBufferHandle = vboHandles[2];
 
-    // create extra buffer handles for the line
+    GLuint lightPositionBufferHandle = vboHandles[3];
+    GLuint lightColorBufferHandle = vboHandles[4];
 
-//    GLuint position2BufferHandle = vboHandles[2];
-//    GLuint color2BufferHandle = vboHandles[3];
+    GLuint linePositionBufferHandle = vboHandles[5];
+    GLuint lineColorBufferHandle = vboHandles[6];
+
+
 
 
     // bind positionBufferHandle to GL_ARRAY_BUFFER buffer object target
-    glBindBuffer(GL_ARRAY_BUFFER, positionBufferHandle);
+    glBindBuffer(GL_ARRAY_BUFFER, cubePositionBufferHandle);
     // creates and initializes GL_ARRAY_BUFFER buffer object's data store
-    glBufferData(GL_ARRAY_BUFFER, 114 * sizeof(float), positionData, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, 108 * sizeof(float), positionData, GL_STATIC_DRAW);
+    // bind normalBufferHandle to GL_ARRAY_BUFFER target
+    glBindBuffer(GL_ARRAY_BUFFER, cubeNormalBufferHandle);
+    glBufferData(GL_ARRAY_BUFFER, 108 * sizeof(float), cubeNormalData, GL_STATIC_DRAW);
 
-     // bind colorBufferHandle to GL_ARRAY_BUFFER target
-    glBindBuffer(GL_ARRAY_BUFFER, colorBufferHandle);
-    glBufferData(GL_ARRAY_BUFFER, 114 * sizeof(float), colorData, GL_STATIC_DRAW);
+    // bind textureBufferHandle to GL_ARRAY_BUFFER target
+    glBindBuffer(GL_ARRAY_BUFFER, cubeTextureBufferHandle);
+    glBufferData(GL_ARRAY_BUFFER, 72 * sizeof(float), cubeTextureData, GL_STATIC_DRAW);
 
-;
+    // bind lightPositionBufferHandle to GL_ARRAY_BUFFER target
+    glBindBuffer(GL_ARRAY_BUFFER, lightPositionBufferHandle);
+    glBufferData(GL_ARRAY_BUFFER, 54 * sizeof(float), lightPositionData, GL_STATIC_DRAW);
+    //std::cout << glGetError() << std::endl;
+    // bind lightColorBufferHandle to GL_ARRAY_BUFFER target
+    glBindBuffer(GL_ARRAY_BUFFER, lightColorBufferHandle);
+    glBufferData(GL_ARRAY_BUFFER, 54 * sizeof(float), lightColorData, GL_STATIC_DRAW);
 
-
-
-
-
-
+    // bind lightPositionBufferHandle to GL_ARRAY_BUFFER target
+    glBindBuffer(GL_ARRAY_BUFFER, linePositionBufferHandle);
+    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), linePositionData, GL_STATIC_DRAW);
+    //std::cout << glGetError() << std::endl;
+    // bind lightColorBufferHandle to GL_ARRAY_BUFFER target
+    glBindBuffer(GL_ARRAY_BUFFER, lineColorBufferHandle);
+    glBufferData(GL_ARRAY_BUFFER, 6 * sizeof(float), lineColorData, GL_STATIC_DRAW);
+    //std::cout << glGetError() << std::endl;
     // Create and set-up the vertex array object
     glGenVertexArrays( 1, &vaoHandle );
     // bind the vertex array object
     glBindVertexArray(vaoHandle);
-
-    /* enables the generic vertex attribute array
-       the values in the generic vertex attribute array will be accessed
-       and used for rendering when calls are made to vertex array commands
-       such as glDrawArrays */
-    glEnableVertexAttribArray(0);  // Vertex position
-    glEnableVertexAttribArray(1);  // Vertex color
-
-
-
-
-    glBindBuffer(GL_ARRAY_BUFFER, positionBufferHandle);
+    glBindBuffer(GL_ARRAY_BUFFER, cubePositionBufferHandle);
 
 
     /* define an array of generic vertex attribute data
@@ -98,15 +152,45 @@ void SceneBasic::CreateVBO()
        vertex attributes at index 0 to use when rendering */
     glVertexAttribPointer( 0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
+    glBindBuffer(GL_ARRAY_BUFFER, cubeNormalBufferHandle);
+    glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, cubeTextureBufferHandle);
+    glVertexAttribPointer( 2, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 
-    glBindBuffer(GL_ARRAY_BUFFER, colorBufferHandle);
+    glBindBuffer(GL_ARRAY_BUFFER, lightPositionBufferHandle);
+    glVertexAttribPointer( 3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, lightColorBufferHandle);
+    glVertexAttribPointer( 4, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, linePositionBufferHandle);
+    glVertexAttribPointer( 5, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, lineColorBufferHandle);
+    glVertexAttribPointer( 6, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 
-     glVertexAttribPointer( 1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(3);
+    glEnableVertexAttribArray(4);
+    glEnableVertexAttribArray(5);
+    glEnableVertexAttribArray(6);
 
 }
+
+
+
+
+
+
+
+
 
 
 void SceneBasic::initScene()
@@ -136,109 +220,246 @@ void SceneBasic::initScene()
     glewExperimental = GL_TRUE;
     glewInit();
 
-	// Create the vertex shader object
-    GLuint vertShader = prog.createShader(GL_VERTEX_SHADER);
+    // Create the vertex shader object
+    GLuint vertShader = prog1.createShader(GL_VERTEX_SHADER);
 
     // Check status
     if( 0 == vertShader)
     {
-		fprintf(stderr, "Error creating vertex shader.\n");
-		exit(1);
+        fprintf(stderr, "Error creating vertex shader.\n");
+        exit(1);
     }
 
-	// load the shader from the file
-    prog.load_shader(vertShader,"shader/basic.vert");
-
-	// compile the shader
-    prog.compileShader(vertShader);
-
+    // load the shader from the file
+    prog1.load_shader(vertShader,"shader/basic.vert");
+    std::cout << glGetError() << std::endl;
+    // compile the shader
+    prog1.compileShader(vertShader);
+    std::cout << glGetError() << std::endl;
     // Check compilation status
-    prog.checkCompileStatus(vertShader);
+    prog1.checkCompileStatus(vertShader);
+    std::cout << glGetError() << std::endl;
 
-  
+
+    //////////////////////////////////////////////////////
+    /////////// line Vertex shader //////////////////////////
+    //////////////////////////////////////////////////////
+    // Create the vertex shader object
+    GLuint vertShader3 = prog3.createShader(GL_VERTEX_SHADER);
+
+    // Check status
+    if( 0 == vertShader3)
+    {
+        fprintf(stderr, "Error creating vertex shader.\n");
+        exit(1);
+    }
+
+    // load the shader from the file
+    prog3.load_shader(vertShader3,"shader/lineshader.vert");
+    std::cout << glGetError() << std::endl;
+    // compile the shader
+    prog3.compileShader(vertShader3);
+    std::cout << glGetError() << std::endl;
+    // Check compilation status
+    prog3.checkCompileStatus(vertShader3);
+
+    // Create the program object
+    if (!prog3.createObject()) printf("error\n");
+
+    // attach shaders to program object
+    prog3.attachShader(vertShader3);
+
+
+     //link the program
+    prog3.link();
+
+
+
+
     //////////////////////////////////////////////////////
     /////////// Fragment shader //////////////////////////
     //////////////////////////////////////////////////////
 
 
    // Create the fragment shader object
-    GLuint fragShader = prog.createShader(GL_FRAGMENT_SHADER);
+    GLuint fragShader = prog1.createShader(GL_FRAGMENT_SHADER);
 
     // Check status
     if( 0 == fragShader)
     {
-		fprintf(stderr, "Error creating fragment shader.\n");
-		exit(1);
+        fprintf(stderr, "Error creating fragment shader.\n");
+        exit(1);
     }
 
-	// load the shader from the file
-    prog.load_shader(fragShader,"shader/basic.frag");
+    // load the shader from the file
+    prog1.load_shader(fragShader,"shader/basic.frag");
 
-	// compile the shader
-    prog.compileShader(fragShader);
+    // compile the shader
+    prog1.compileShader(fragShader);
 
     // Check compilation status
-    prog.checkCompileStatus(fragShader);
+    prog1.checkCompileStatus(fragShader);
 
     // Create the program object
-    if (!prog.createObject()) printf("error\n");
+    if (!prog1.createObject()) printf("error\n");
 
     // attach shaders to program object
-    prog.attachShader(vertShader);
-    prog.attachShader(fragShader);
-
-    // Bind index 0 to the shader input variable "VertexPosition"
-    prog.bindAttribLocation(0, "VertexPosition");
-    // Bind index 1 to the shader input variable "VertexColor"
-    prog.bindAttribLocation(1, "VertexColor");
-
-
-//    // Bind index 0 to the shader input variable "VertexPosition"
-//    prog.bindAttribLocation(2, "VertexPosition");
-//    // Bind index 1 to the shader input variable "VertexColor"
-//    prog.bindAttribLocation(3, "VertexColor");
-
-
-
+    prog1.attachShader(vertShader);
+    prog1.attachShader(fragShader);
 
     // link the program
-    prog.link();
+    prog1.link();
 
-    setDefaults();
+    // Create the vertex shader object
+    GLuint vertShader2 = prog2.createShader(GL_VERTEX_SHADER);
+
+    // Check status
+    if( 0 == vertShader2)
+    {
+        fprintf(stderr, "Error creating vertex shader.\n");
+        exit(1);
+    }
+
+    // load the shader from the file
+    prog2.load_shader(vertShader2,"shader/light.vert");
+
+    // compile the shader
+    prog2.compileShader(vertShader2);
+
+    // Check compilation status
+    prog2.checkCompileStatus(vertShader2);
+
+
+    //////////////////////////////////////////////////////
+    /////////// Fragment shader //////////////////////////
+    //////////////////////////////////////////////////////
+
+
+   // Create the fragment shader object
+    GLuint fragShader2 = prog2.createShader(GL_FRAGMENT_SHADER);
+
+    // Check status
+    if( 0 == fragShader2)
+    {
+        fprintf(stderr, "Error creating fragment shader.\n");
+        exit(1);
+    }
+
+    // load the shader from the file
+    prog2.load_shader(fragShader2,"shader/light.frag");
+
+    // compile the shader
+    prog2.compileShader(fragShader2);
+
+    // Check compilation status
+    prog2.checkCompileStatus(fragShader2);
+
+    // Create the program object
+    if (!prog2.createObject()) printf("error\n");
+
+    // attach shaders to program object
+    prog2.attachShader(vertShader2);
+    prog2.attachShader(fragShader2);
+
+    // link the program
+    prog2.link();
+
     // create and populate the vertex buffer opbject
     CreateVBO();
 
-    prog.printActiveUniforms();
+    prog1.printActiveUniforms();
+    //prog3.printActiveUniforms();
 
-    model = mat4(1.0f); // identity
-
-
-
-
-
+    // initialise he modelling and viewing matrices
+    model = mat4(1.0f);
     projection = mat4(1.0f);
 
-    glClearColor( 0.3, 0.3, 0.3, 1.0 );
+    // set the background window color
+    glClearColor( 0.0, 0.5, 0.8, 1.0 );
     glEnable(GL_DEPTH_TEST);
+    // Load texture file
+    QImage timg = QGLWidget::convertToGLFormat(*image);
+    std::cout << glGetError() << "image depth" << timg.depth() << "image height" << timg.height() << std::endl;
+    // Copy image texture file to OpenGL
+    glActiveTexture(GL_TEXTURE0);
+    std::cout << glGetError() << std::endl;
+    GLuint tid;
+    std::cout << glGetError() << std::endl;
+    glGenTextures(1, &tid);
+    std::cout << glGetError() << std::endl;
+    glBindTexture(GL_TEXTURE_2D, tid);
+    std::cout << glGetError() << std::endl;
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, timg.width(), timg.height(), 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, timg.bits());
+    std::cout << glGetError() << std::endl;
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    std::cout << glGetError() << std::endl;
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    std::cout << glGetError() << std::endl;
+    prog1.use();
+    prog1.setUniform("Tex1", 0);
+    prog1.setUniform("ambientColor", vec4(0.4,0.4,0.4,1.0));
+    prog1.setUniform("diffuseColor1", vec4(0.0f,0.0f,1.0f,1.0));
+    prog1.setUniform("diffuseColor2", vec4(1.0f,0.0f,0.0f,1.0));
+    prog1.setUniform("diffuseColor3", vec4(0.0f,1.0f,0.0f,1.0));
+    prog1.setUniform("specularColor1", vec4(0.0,0.0,1.0,1.0));
+    prog1.setUniform("specularColor2", vec4(1.0,0.0,0.0,1.0));
+    prog1.setUniform("specularColor3", vec4(0.0,1.0,0.0,1.0));
+    prog1.setUniform("ambientReflection", 1.0f);
+    prog1.setUniform("diffuseReflection", 1.0f);
+    prog1.setUniform("specularReflection", 1.0f);
+    prog1.setUniform("shininess", (GLfloat) 50.0);
+    prog1.setUniform("spotCutoff",45.0f);
+    prog1.setUniform("spotExponent",20.0f);
+    prog1.setUniform("constantAttenuation",0.0f);
+    prog1.setUniform("linearAttenuation",1.0f);
+    prog1.setUniform("quadraticAttenuation",0.0f);
+    prog1.release();
+    std::cout << "prog1 released"<< glGetError() << std::endl;
+
 }
 
 
-void SceneBasic::update( float t )
+
+
+void SceneBasic::update( QImage* image )
 {
+    this->image = image;
+    QImage timg = QGLWidget::convertToGLFormat(*image);
 
+    // Copy file to OpenGL
+    glActiveTexture(GL_TEXTURE0);
+    GLuint tid;
+    glGenTextures(1, &tid);
+    glBindTexture(GL_TEXTURE_2D, tid);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, timg.width(), timg.height(), 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, timg.bits());
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 }
+
+
+void SceneBasic::update( float t)
+{
+    //lightAngle += 2*PI/360.0;
+    //if (lightAngle >= 2*PI) lightAngle -= 2*PI;
+}
+
 
 void SceneBasic::setLineData(float line[6])
 {
+    for (int i = 0; i < 5; ++i) {
+        linePositionData[i]=line[i];
+        CreateVBO();
+    }
 
-    for (int i=108; i<114; i++)  positionData[i] = line[i-108];
-    CreateVBO(); // is this very efficient-could changed the line in the shader itsel
+
 
 }
 
 void SceneBasic::setRot()
 {
-    vec3 d ={this->positionData[111],this->positionData[112],this->positionData[113]};
+    vec3 d ={this->linePositionData[3],this->linePositionData[4],this->linePositionData[5]};
     this->setDnorm(d);
     this->createTransMatrix();
     this->createRotMatrix();
@@ -255,6 +476,8 @@ void SceneBasic::setDefaults()
 {
     setRot();
     setMatrices( vec3(0.0f,0.0f,2.0f),  vec3(0.0f,0.0f,0.0f),this->rot);
+    setMatricesLine(vec3(0.0f,0.0f,2.0f),  vec3(0.0f,0.0f,0.0f));
+    //setMaterialContributions(1.0f);
 
 }
 
@@ -265,9 +488,129 @@ void SceneBasic::setMatrices(vec3 eye, vec3 point ,mat4 rot)
     model=rot;
     view = glm::lookAt(eye, point, vec3(0.0f,1.0f,0.0f));
     mat4 mv = view * model;
-    prog.setUniform("ModelViewMatrix", mv);
-    prog.setUniform("MVP", projection * mv);
+    prog1.use();  // tells which prog to use.
+    prog1.setUniform("ModelViewMatrix", mv);
+    prog1.setUniform("MVP", projection * mv);
+    prog1.setUniform("NormalMatrix",
+                                mat3( vec3(mv[0]), vec3(mv[1]), vec3(mv[2]) ));
+    prog1.setUniform("lightPosition1", view * lightPosition1);
+
+    // Bind index 0 to the shader input variable "VertexPosition"
+      prog1.bindAttribLocation(0, "VertexPosition");
+      // Bind index 1 to the shader input variable "VertexNormal"
+      prog1.bindAttribLocation(1, "VertexNormal");
+      // Bind index 2 to the shader input variable "VertexTexCoord"
+      prog1.bindAttribLocation(2, "VertexTexCoord");
+
+//      /* enables the generic vertex attribute array
+//         the values in the generic vertex attribute array will be accessed
+//         and used for rendering when calls are made to vertex array commands
+//         such as glDrawArrays */
+
+       glEnableVertexAttribArray(0);
+       glEnableVertexAttribArray(1);
+       glEnableVertexAttribArray(2);
+
+      glDrawArrays(GL_TRIANGLES, 0, 36 );
+
+
+//      /* disables the generic vertex attribute array */
+      glDisableVertexAttribArray(0);
+      glDisableVertexAttribArray(1);
+      glDisableVertexAttribArray(2);
+
+//      // release the program object
+      prog1.release();
+
 }
+
+void SceneBasic::setMatricesLine(glm::vec3 eye, glm::vec3 point)
+{
+
+    model=mat4(1.0f);
+    view = glm::lookAt(eye, point, vec3(0.0f,1.0f,0.0f));
+    mat4 mv = view * model;
+    prog3.use();  // tells which prog to use.
+    prog3.setUniform("ModelViewMatrix", mv);
+    prog3.setUniform("MVP", projection * mv);
+  ;
+    //prog1.setUniform("lightPosition1", view * lightPosition1);
+
+    // Bind index 5 to the shader input variable "VertexPosition"
+      prog3.bindAttribLocation(5, "VertexPosition");
+      // Bind index 6 to the shader input variable "VertexNormal"
+      prog3.bindAttribLocation(6, "VertexColor");
+
+
+      /* enables the generic vertex attribute array
+         the values in the generic vertex attribute array will be accessed
+         and used for rendering when calls are made to vertex array commands
+         such as glDrawArrays */
+
+       glEnableVertexAttribArray(5);
+       glEnableVertexAttribArray(6);
+
+
+
+      glDrawArrays(GL_LINES, 0, 36 );
+
+      /* disables the generic vertex attribute array */
+
+      glDisableVertexAttribArray(5);
+      glDisableVertexAttribArray(6);
+
+      // release the program object
+      prog3.release();
+
+}
+
+
+
+
+void SceneBasic::setMatricesLight1(float angleX,float angleY)
+{
+
+
+    model = mat4(1.0f);
+
+
+    lightPosition1b = glm::rotate(mat4(1.0f),angleX,vec3(0.0,1.0,0.0))* vec4(0.0f, 0.0f, 2.5f, 1.0f);
+    lightPosition1a = glm::rotate(mat4(1.0f),angleY,vec3(1.0,0.0,0.0))* vec4(0.0f, 0.0f, 2.5f, 1.0f);
+    lightPosition1=lightPosition1b;//*lightPosition1a;
+    mat4 m1 = glm::translate(mat4(1.0f),vec3(lightPosition1.x,lightPosition1.y,lightPosition1.z));
+    mat4 m1_1 = glm::translate(mat4(1.0f),vec3(lightPosition1b.x,lightPosition1b.y,lightPosition1b.z));
+    mat4 m2 = glm::rotate(mat4(1.0f),angleX,vec3(0.0,1.0,0.0));
+    mat4 m2_2 = glm::rotate(mat4(1.0f),angleY,vec3(0.1,0.0,0.0));
+    mat4 m3 = glm::rotate(mat4(1.0f),PI/2.0f,vec3(1.0,0.0,0.0));
+    mat4 m4 = glm::scale(mat4(1.0f),vec3(0.5f,0.5f,0.5f));
+    mat4 m5 = glm::translate(mat4(1.0f),vec3(0.0f,-1.0f,0.0f));
+
+    model = m1 *m1_1 * m2 * m2_2 * m3 * m4 * m5;
+    mat4 mv = view * model;
+
+    prog2.use();
+    prog2.setUniform("MVP", projection * mv);
+    // Bind index 3 to the shader input variable "VertexPosition"
+    prog2.bindAttribLocation(3, "VertexPosition");
+    // Bind index 4 to the shader input variable "VertexColor"
+    prog2.bindAttribLocation(4, "VertexColor");
+
+    glEnableVertexAttribArray(3);
+    glEnableVertexAttribArray(4);
+
+    // draw the light pyramid
+    glDrawArrays(GL_TRIANGLES, 0, 18 );
+
+    glDisableVertexAttribArray(3);
+    glDisableVertexAttribArray(4);
+
+    // release the program object
+    prog2.release();
+}
+
+
+
+
 
 void SceneBasic::createRotMatrix()
 {
@@ -354,9 +697,10 @@ void SceneBasic::render(vec3 eye,vec3 point)
        36 specifies the number of indices to be rendered. */
 
     setMatrices(eye,point,this->rot);
-    glDrawArrays(GL_TRIANGLES, 0, 36 );
-    setMatrices(eye,point,mat4(1.0));
-    glDrawArrays(GL_LINES, 36, 38 );
+    setMatricesLight1(0.0,0.0);
+    setMatricesLine(eye,point);
+
+    ;
 }
 
 void SceneBasic::resize(int w, int h)
@@ -411,4 +755,31 @@ void SceneBasic::printActiveAttribs(GLuint programHandle) {
     }
 
     free(name);
+}
+
+void SceneBasic::setMaterialContributions(float ambientReflection,float diffuseReflection,float specularReflection,float constantAttenuation,float linearAttenuation,float quadraticAttenuation,float spotCutoff,float spotExponent,vec4 ambientColor,vec4 diffuseColor1,vec4 specularColor1)
+{
+
+
+    prog1.use();  // tells which prog to use.
+
+
+
+    prog1.setUniform("ambientReflection",ambientReflection);
+    prog1.setUniform("diffuseReflection",diffuseReflection);
+    prog1.setUniform("specularReflection",specularReflection);
+    prog1.setUniform("constantAttenuation",constantAttenuation);
+    prog1.setUniform("linearAttenuation",linearAttenuation);
+    prog1.setUniform("quadraticAttenuation",quadraticAttenuation);
+    prog1.setUniform("spotCutoff",spotCutoff);
+    prog1.setUniform("spotExponent",spotExponent);
+    prog1.setUniform("ambientColor",ambientColor);
+    prog1.setUniform("diffuseColor1",diffuseColor1);
+    prog1.setUniform("specularColor1",specularColor1);
+
+
+
+//      // release the program object
+      prog1.release();
+
 }

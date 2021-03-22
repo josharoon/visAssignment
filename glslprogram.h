@@ -76,6 +76,10 @@ public:
     // installs the program object specified by handle as part of current rendering state.
     void use();
 
+
+    // releases the current program object
+    void release();
+
     // creates an empty program object and returns a non-zero value by which it can be referenced.
     bool createObject();
 

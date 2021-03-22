@@ -15,19 +15,36 @@ class MainView : public QGLWidget
 private:
     QTimer *timer;
     Scene *scene;
+    int samples=16;
+
 
 
 
 public:
-    MainView( const QGLFormat & format, QWidget *parent = 0 );
+    MainView( const QGLFormat & format, QWidget *parent = 0);
     vec3 eye = {0.0,0.0,2.0};// eye/camera co-ordinates
     vec3 point= {0.0,0.0,0.0}; // lookat point
-    vec3 Mu = {0.0,1.0,0.0};
+    vec3 Mu = {0.0,1.0,0.0}; //directional vector line
     float alpha;
     float line[6]={0.0,0.0,0.0,0.0,1.0,0.0}; //point representation of line
     float d=1.0; //Scalar multiplier for line length
     void calcLine();
     void calcRot();
+    void setSamples(int samples);//doesn't yet update we will need to recreate widget.
+    float ambientReflection =1.0f;
+    float diffuseReflection =1.0f;
+    float specularReflection =1.0f;
+    float constantAttenuation =1.0f;
+    float linearAttenuation =1.0f;
+    float quadraticAttenuation =1.0f;
+    float spotCutoff =1.0f;
+    float spotExponent =1.0f;
+    vec4 ambientColor = {1.0,1.0,1.0,1.0};
+    vec4 diffuseColor1 = {1.0,1.0,1.0,1.0};
+    vec4 specularColor1 = {1.0,1.0,1.0,1.0};
+    float lightX =0.0;
+    float lightY= 0.0;
+
 
 
 protected:
@@ -38,9 +55,7 @@ protected:
 
 
 
-
-private:
-    //Ui::uiInput ui; // doesn't seem to do anthing.
+    void setFormat();
 
 public slots:
     void timerUpdate();
